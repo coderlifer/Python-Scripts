@@ -1,6 +1,6 @@
 # Python-Scripts
 
-Python Scripts associated with data mining, machine learning.
+Python implementation for machine learning algorithms.
 
 
 ## [DecisionTree](https://github.com/watsonyanghx/Python-Scripts/tree/master/DecisionTree)
