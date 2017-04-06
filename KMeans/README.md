@@ -14,7 +14,7 @@ KMeans algorithm implemented using python numpy, which can be applied to data of
   
   Toy data for testing. 
 
-  **Notice** that the data going to be clustered could be of any dimension.
+  **Notice** that the data going to be clustered could be of **any dimension**.
 
 - kmeans.py
   
