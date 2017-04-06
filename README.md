@@ -15,7 +15,7 @@ Python Scripts associated with data mining, machine learning.
 
 ## [Useful_Scripts](https://github.com/watsonyanghx/Python-Scripts/tree/master/Useful_Scripts)
 
-- Useful scripts collected when coding.
+- Useful scripts for reusing.
 
 
 
