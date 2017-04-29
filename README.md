@@ -1,6 +1,6 @@
 # Python-Scripts
 
-Python implementation for machine learning algorithms.
+Python implementations of machine learning algorithms.
 
 
 ## [DecisionTree](https://github.com/watsonyanghx/Python-Scripts/tree/master/DecisionTree)
