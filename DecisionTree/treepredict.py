@@ -1,55 +1,54 @@
 #!/usr/bin/python
 
-# python 2.7 required
+# python 3.5 required
 # only for binary classification
 
-from __future__ import division
 from collections import Counter
-from PIL import Image,ImageDraw
+from PIL import Image, ImageDraw
 import math
 import sys
 import ast
 import csv
 import operator
 
-my_data=[['slashdot','USA','yes',18,'None'],
-        ['google','France','yes',23,'Premium'],
-        ['digg','USA','yes',24,'Basic'],
-        ['kiwitobes','France','yes',23,'Basic'],
-        ['google','UK','no',21,'Premium'],
-        ['(direct)','New Zealand','no',12,'None'],
-        ['(direct)','UK','no',21,'Basic'],
-        ['google','USA','no',24,'Premium'],
-        ['slashdot','France','yes',19,'None'],
-        ['digg','USA','no',18,'None'],
-        ['google','UK','no',18,'None'],
-        ['kiwitobes','UK','no',19,'None'],
-        ['digg','New Zealand','yes',12,'Basic'],
-        ['slashdot','UK','no',21,'None'],
-        ['google','UK','yes',18,'Basic'],
-        ['kiwitobes','France','yes',19,'Basic']]
+my_data = [['slashdot', 'USA', 'yes', 18, 'None'],
+           ['google', 'France', 'yes', 23, 'Premium'],
+           ['digg', 'USA', 'yes', 24, 'Basic'],
+           ['kiwitobes', 'France', 'yes', 23, 'Basic'],
+           ['google', 'UK', 'no', 21, 'Premium'],
+           ['(direct)', 'New Zealand', 'no', 12, 'None'],
+           ['(direct)', 'UK', 'no', 21, 'Basic'],
+           ['google', 'USA', 'no', 24, 'Premium'],
+           ['slashdot', 'France', 'yes', 19, 'None'],
+           ['digg', 'USA', 'no', 18, 'None'],
+           ['google', 'UK', 'no', 18, 'None'],
+           ['kiwitobes', 'UK', 'no', 19, 'None'],
+           ['digg', 'New Zealand', 'yes', 12, 'Basic'],
+           ['slashdot', 'UK', 'no', 21, 'None'],
+           ['google', 'UK', 'yes', 18, 'Basic'],
+           ['kiwitobes', 'France', 'yes', 19, 'Basic']]
 
 
 class decisionnode:
-    def __init__(self,col=-1,value=None,results=None,tb=None,fb=None):
-        self.col=col
-        self.value=value
-        self.results=results
-        self.tb=tb
-        self.fb=fb
+    def __init__(self, col=-1, value=None, results=None, tb=None, fb=None):
+        self.col = col
+        self.value = value
+        self.results = results
+        self.tb = tb
+        self.fb = fb
 
 
 # Divides a set on a specific column. Can handle numeric
 # or nominal values
-def divideset(rows,column,value):
+def divideset(rows, column, value):
     # Make a function that tells us if a row is in 
     # the first group (true) or the second group (false)
-    split_function=None
-    if isinstance(value,int) or isinstance(value,float):
-        split_function = lambda row:row[column] >= value
+    split_function = None
+    if isinstance(value, int) or isinstance(value, float):
+        split_function = lambda row: row[column] >= value
     else:
-        split_function = lambda row:row[column] == value
-   
+        split_function = lambda row: row[column] == value
+
     # Divide the rows into two sets and return them
     set1 = [row for row in rows if split_function(row)]
     set2 = [row for row in rows if not split_function(row)]
@@ -59,29 +58,29 @@ def divideset(rows,column,value):
 # Create counts of possible results (the last column of 
 # each row is the result)
 def uniquecounts(rows):
-    results={}
+    results = {}
     for row in rows:
-         # The result is the last column
-        r=row[len(row)-1]
+        # The result is the last column
+        r = row[len(row) - 1]
         if r not in results:
-            results[r]=0
-        results[r]+=1
+            results[r] = 0
+        results[r] += 1
     return results
 
 
 # Probability that a randomly placed item will
 # be in the wrong category
 def giniimpurity(rows):
-    total=len(rows)
-    counts=uniquecounts(rows)
-    imp=0
+    total = len(rows)
+    counts = uniquecounts(rows)
+    imp = 0
     for k1 in counts:
-        p1=float(counts[k1])/total
+        p1 = float(counts[k1]) / total
         for k2 in counts:
-            if k1==k2:
+            if k1 == k2:
                 continue
-            p2 = float(counts[k2])/total
-            imp += p1*p2
+            p2 = float(counts[k2]) / total
+            imp += p1 * p2
     return imp
 
 
@@ -89,50 +88,50 @@ def giniimpurity(rows):
 # the different possible results
 def entropy(rows):
     from math import log
-    log2=lambda x:log(x)/log(2)
-    results=uniquecounts(rows)
+    log2 = lambda x: log(x) / log(2)
+    results = uniquecounts(rows)
     # Now calculate the entropy
-    ent=0.0
+    ent = 0.0
     for r in results.keys():
-        p=float(results[r])/len(rows)
-        ent=ent-p*log2(p)
+        p = float(results[r]) / len(rows)
+        ent = ent - p * log2(p)
     return ent
 
 
 def buildtree(rows, scoref=entropy):
-    if len(rows)==0:
+    if len(rows) == 0:
         return decisionnode()
-    current_score=scoref(rows)
+    current_score = scoref(rows)
 
     # Set up some variables to track the best criteria
-    best_gain=0.0
-    best_criteria=None
-    best_sets=None
+    best_gain = 0.0
+    best_criteria = None
+    best_sets = None
 
-    column_count=len(rows[0])-1
-    for col in range(0,column_count):
+    column_count = len(rows[0]) - 1
+    for col in range(0, column_count):
         # Generate the list of different values in
         # this column
-        column_values={}
+        column_values = {}
         for row in rows:
-            column_values[row[col]]=1
+            column_values[row[col]] = 1
         # Now try dividing the rows up for each value
         # in this column
         for value in column_values.keys():
-            (set1, set2)=divideset(rows, col, value)
-              
+            (set1, set2) = divideset(rows, col, value)
+
             # Information gain
-            p=float(len(set1))/len(rows)
-            gain=current_score-p*scoref(set1)-(1-p)*scoref(set2)
-            if gain>best_gain and len(set1)>0 and len(set2)>0:
-                best_gain=gain
-                best_criteria=(col, value)
-                best_sets=(set1, set2)
+            p = float(len(set1)) / len(rows)
+            gain = current_score - p * scoref(set1) - (1 - p) * scoref(set2)
+            if gain > best_gain and len(set1) > 0 and len(set2) > 0:
+                best_gain = gain
+                best_criteria = (col, value)
+                best_sets = (set1, set2)
 
     # Create the sub branches   
-    if best_gain>0:
-        trueBranch=buildtree(best_sets[0])
-        falseBranch=buildtree(best_sets[1])
+    if best_gain > 0:
+        trueBranch = buildtree(best_sets[0])
+        falseBranch = buildtree(best_sets[1])
         return decisionnode(col=best_criteria[0], value=best_criteria[1], tb=trueBranch, fb=falseBranch)
     else:
         return decisionnode(results=uniquecounts(rows))
@@ -140,51 +139,51 @@ def buildtree(rows, scoref=entropy):
 
 def prune(tree, mingain):
     # If the branches aren't leaves, then prune them
-    if tree.tb.results==None:
-        prune(tree.tb,mingain)
-    if tree.fb.results==None:
-        prune(tree.fb,mingain)
-    
+    if tree.tb.results == None:
+        prune(tree.tb, mingain)
+    if tree.fb.results == None:
+        prune(tree.fb, mingain)
+
     # If both the subbranches are now leaves, see if they
     # should merged
-    if tree.tb.results!=None and tree.fb.results!=None:
+    if tree.tb.results != None and tree.fb.results != None:
         # Build a combined dataset
-        tb,fb=[],[]
-        for v,c in tree.tb.results.items():
-            tb+=[[v]]*c
-        for v,c in tree.fb.results.items():
-            fb+=[[v]]*c
-    
+        tb, fb = [], []
+        for v, c in tree.tb.results.items():
+            tb += [[v]] * c
+        for v, c in tree.fb.results.items():
+            fb += [[v]] * c
+
         # Test the reduction in entropy
-        delta=entropy(tb+fb)-(entropy(tb)+entropy(fb)/2)
+        delta = entropy(tb + fb) - (entropy(tb) + entropy(fb) / 2)
 
-        if delta<mingain:
+        if delta < mingain:
             # Merge the branches
-            tree.tb,tree.fb=None,None
-            tree.results=uniquecounts(tb+fb)
+            tree.tb, tree.fb = None, None
+            tree.results = uniquecounts(tb + fb)
 
 
-def mdclassify(observation,tree):
+def mdclassify(observation, tree):
     if tree.results != None:
         return tree.results
     else:
         v = observation[tree.col]
         if v == None:
-            tr,fr = mdclassify(observation,tree.tb),mdclassify(observation,tree.fb)
+            tr, fr = mdclassify(observation, tree.tb), mdclassify(observation, tree.fb)
             tcount = sum(tr.values())
             fcount = sum(fr.values())
-            tw = float(tcount)/(tcount+fcount)
-            fw = float(fcount)/(tcount+fcount)
+            tw = float(tcount) / (tcount + fcount)
+            fw = float(fcount) / (tcount + fcount)
             result = {}
-            for k,v in tr.items():
-                result[k] = v*tw
-            for k,v in fr.items():
+            for k, v in tr.items():
+                result[k] = v * tw
+            for k, v in fr.items():
                 if k not in result:
                     result[k] = 0
-                result[k] += v*fw
+                result[k] += v * fw
             return result
         else:
-            if isinstance(v,int) or isinstance(v,float):
+            if isinstance(v, int) or isinstance(v, float):
                 if v >= tree.value:
                     branch = tree.tb
                 else:
@@ -194,7 +193,7 @@ def mdclassify(observation,tree):
                     branch = tree.tb
                 else:
                     branch = tree.fb
-            return mdclassify(observation,branch)
+            return mdclassify(observation, branch)
 
 
 def calcu_acc(test_examples, tree):
@@ -202,63 +201,63 @@ def calcu_acc(test_examples, tree):
     total = len(test_examples)
 
     for item in test_examples:
-        class_label = mdclassify(item[:len(item)-1], tree)
+        class_label = mdclassify(item[:len(item) - 1], tree)
         predicted_class = max(class_label.iteritems(), key=operator.itemgetter(1))[0]
         if predicted_class == item[len(item) - 1]:
             count = count + 1
-    print "correct prediction:%d" % count
-    print "testset:%d" % total
-    acc = count/float(total) * 100
+    print("correct prediction:%d" % count)
+    print("testset:%d" % total)
+    acc = count / float(total) * 100
 
     return acc
 
 
 def getwidth(tree):
-    if tree.tb==None and tree.fb==None:
+    if tree.tb == None and tree.fb == None:
         return 1
-    return getwidth(tree.tb)+getwidth(tree.fb)
+    return getwidth(tree.tb) + getwidth(tree.fb)
 
 
 def getdepth(tree):
-    if tree.tb==None and tree.fb==None:
+    if tree.tb == None and tree.fb == None:
         return 0
-    return max(getdepth(tree.tb),getdepth(tree.fb))+1
+    return max(getdepth(tree.tb), getdepth(tree.fb)) + 1
 
 
-def drawtree(tree,jpeg='tree.jpg'):
-    w=getwidth(tree)*100
-    h=getdepth(tree)*100+120
+def drawtree(tree, jpeg='tree.jpg'):
+    w = getwidth(tree) * 100
+    h = getdepth(tree) * 100 + 120
 
-    img=Image.new('RGB',(w,h),(255,255,255))
-    draw=ImageDraw.Draw(img)
+    img = Image.new('RGB', (w, h), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
 
-    drawnode(draw,tree,w/2,20)
-    img.save(jpeg,'JPEG')
+    drawnode(draw, tree, w / 2, 20)
+    img.save(jpeg, 'JPEG')
 
-  
-def drawnode(draw,tree,x,y):
-    if tree.results==None:
+
+def drawnode(draw, tree, x, y):
+    if tree.results == None:
         # Get the width of each branch
-        w1=getwidth(tree.fb)*100
-        w2=getwidth(tree.tb)*100
+        w1 = getwidth(tree.fb) * 100
+        w2 = getwidth(tree.tb) * 100
 
         # Determine the total space required by this node
-        left=x-(w1+w2)/2
-        right=x+(w1+w2)/2
+        left = x - (w1 + w2) / 2
+        right = x + (w1 + w2) / 2
 
         # Draw the condition string
-        draw.text((x-20,y-10),str(tree.col)+':'+str(tree.value),(0,0,0))
+        draw.text((x - 20, y - 10), str(tree.col) + ':' + str(tree.value), (0, 0, 0))
 
         # Draw links to the branches
-        draw.line((x,y,left+w1/2,y+100),fill=(255,0,0))
-        draw.line((x,y,right-w2/2,y+100),fill=(255,0,0))
-        
+        draw.line((x, y, left + w1 / 2, y + 100), fill=(255, 0, 0))
+        draw.line((x, y, right - w2 / 2, y + 100), fill=(255, 0, 0))
+
         # Draw the branch nodes
-        drawnode(draw,tree.fb,left+w1/2,y+100)
-        drawnode(draw,tree.tb,right-w2/2,y+100)
+        drawnode(draw, tree.fb, left + w1 / 2, y + 100)
+        drawnode(draw, tree.tb, right - w2 / 2, y + 100)
     else:
-        txt=' \n'.join(['%s:%d'%v for v in tree.results.items()])
-        draw.text((x-20,y),txt,(0,0,0))
+        txt = ' \n'.join(['%s:%d' % v for v in tree.results.items()])
+        draw.text((x - 20, y), txt, (0, 0, 0))
 
 
 #####################################################################################
@@ -282,18 +281,18 @@ def readData(datafile):
 
 # preprocess tranining data to fill up missing value with the most value in corresponding column
 def preprocess(examples, attributes):
-    print "Preprocessing data..."
-    class_values = [example[len(examples[0])-1] for example in examples]
+    print("Preprocessing data...")
+    class_values = [example[len(examples[0]) - 1] for example in examples]
     class_mode = Counter(class_values)
     class_mode = class_mode.most_common(1)[0][0]
 
     for attr_index in range(len(attributes)):
         # change '<=50K' to the label according to your dataset
-        ex_0class = filter(lambda x: x[len(examples[0])-1] == '<=50K', examples)
+        ex_0class = filter(lambda x: x[len(examples[0]) - 1] == '<=50K', examples)
         values_0class = [example[attr_index] for example in ex_0class]
 
         # change '>50K' to another label according to your dataset
-        ex_1class = filter(lambda x: x[len(examples[0])-1] == '>50K', examples)
+        ex_1class = filter(lambda x: x[len(examples[0]) - 1] == '>50K', examples)
         values_1class = [example[attr_index] for example in ex_1class]
 
         values = Counter(values_0class)
@@ -308,19 +307,19 @@ def preprocess(examples, attributes):
 
         mode_01 = [mode0, mode1]
 
-        attr_modes = [0]*len(attributes)
+        attr_modes = [0] * len(attributes)
         attr_modes[attr_index] = mode_01
-        
+
         for example in examples:
             if (example[attr_index] == '?'):
-                if (example[len(examples[0])-1] == '<=50K'):
+                if (example[len(examples[0]) - 1] == '<=50K'):
                     example[attr_index] = attr_modes[attr_index][0]
-                elif (example[len(examples[0])-1] == '>50K'):
+                elif (example[len(examples[0]) - 1] == '>50K'):
                     example[attr_index] = attr_modes[attr_index][1]
                 else:
                     example[attr_index] = class_mode
 
-        #convert attributes that are numeric to floats
+        # convert attributes that are numeric to floats
         for example in examples:
             for x in range(len(examples[0])):
                 if attributes[x] == 'True':
@@ -334,43 +333,41 @@ def main():
     args = ast.literal_eval(args)
 
     if len(args) < 2:
-        print "You have input less than the minimum number of arguments."
+        print("You have input less than the minimum number of arguments.")
     elif args[1][-4:] != ".csv":
-        print "Training file must be a .csv!"
+        print("Training file must be a .csv!")
     elif args[2][-4:] != ".csv":
-        print "Testing file must be a .csv!"
+        print("Testing file must be a .csv!")
     else:
         # build tree
-        print "-------------------------"
-        print "Reading training data..."
+        print("-------------------------")
+        print("Reading training data...")
         datafile = args[1]
         examples, attributes = readData(datafile)
         examples = preprocess(examples, attributes)
         # print examples[0]
-        print "Building tree..."
+        print("Building tree...")
         tree = buildtree(examples, scoref=giniimpurity)
 
-
-        print "-------------------------"
-        print "Reading testing data..."
+        print("-------------------------")
+        print("Reading testing data...")
         test_file = args[2]
         test_examples, test_attributes = readData(test_file)
 
-        print "Testing tree accuracy..."
+        print("Testing tree accuracy...")
         acc = calcu_acc(test_examples, tree)
-        print "Accuracy: %f%%" % acc
-        
-        print "Drawing treeview.jpg..."
+        print("Accuracy: %f%%" % acc)
+
+        print("Drawing treeview.jpg...")
         drawtree(tree, jpeg='treeView.jpg')
 
-
-        print "-------------------------"
-        print "prune tree..."
+        print("-------------------------")
+        print("prune tree...")
         prune(tree, 0.8)
         acc_after_prune = calcu_acc(test_examples, tree)
-        print "Accuracy after pruning: %f%%" % acc_after_prune
+        print("Accuracy after pruning: %f%%" % acc_after_prune)
 
-        print "Drawing treeview.jpg..."
+        print("Drawing treeview.jpg...")
         drawtree(tree, jpeg='prunedTreeView.jpg')
 
 
